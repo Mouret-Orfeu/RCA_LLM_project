@@ -213,6 +213,7 @@ class GPT(nn.Module):
             f"Extra in HF: {sorted(set_hf - set_local)[:5]}"
         )
 
+        # copy the pretrained weights in the local model
         for k in sd_hf_keys:
             if any(k.endswith(w) for w in transposed):
                 # special treatment for the Conv1D weights we need to transpose
@@ -307,7 +308,7 @@ class GPT(nn.Module):
             # if the sequence context is growing too long we just take the last bit of the sequence that fits into block_size
             idx_cond = idx if idx.size(1) <= self.block_size else idx[:, -self.block_size:]
             # forward the model to get the logits for the index in the sequence
-            # appell de d'instance GPT comme une fonction (car callable grace au forward)
+            # appelle de l'instance GPT comme une fonction (car callable grace au forward)
             logits, _ = self(idx_cond)
             # pluck the logits at the final step and scale by desired temperature
             # sur les 3 dimensions (B, T, C) on prend juste le dernier vecteur de logits (celui du dernier token de la séquence)
