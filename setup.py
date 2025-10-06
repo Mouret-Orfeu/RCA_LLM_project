@@ -1,12 +1,25 @@
-from setuptools import setup
+# setup.py
+from pathlib import Path
+from setuptools import setup, find_packages
 
-setup(name='minGPT',
-      version='0.0.1',
-      author='Andrej Karpathy',
-      packages=['mingpt'],
-      description='A PyTorch re-implementation of GPT',
-      license='MIT',
-      install_requires=[
-            'torch',
-      ],
+def parse_requirements():
+    req = Path("requirements.txt")
+    if req.exists():
+        return [
+            line.strip()
+            for line in req.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+    return []
+
+setup(
+    name="rca-llm",
+    version="0.1.0",
+    author="Your Name",
+    description="RCA LLM utilities (trainer + utils)",
+    license="MIT",
+    package_dir={"": "src"},
+    packages=find_packages(where="src"),
+    install_requires=parse_requirements(),
+    python_requires="==3.12.3",
 )

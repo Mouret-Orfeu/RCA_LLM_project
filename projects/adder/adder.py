@@ -88,6 +88,8 @@ class AdditionDataset(Dataset):
     def get_vocab_size(self):
         return 10 # digits 0..9
 
+    # define the block size of the dataset
+    # this is how many tokens of context the model will see
     def get_block_size(self):
         # a,b,a+b, and +1 due to potential carry overflow,
         # but then also -1 because very last digit doesn't ever plug back
@@ -97,6 +99,7 @@ class AdditionDataset(Dataset):
     def __len__(self):
         return self.ixes.nelement()
 
+    # get single couple (x,y) from raw data, convert tokens into token indices and returns as tensors
     def __getitem__(self, idx):
         ndigit = self.config.ndigit
         # given a problem index idx, first recover the associated a + b
