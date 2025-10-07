@@ -33,6 +33,9 @@ class HFModelAdapter(nn.Module):
                 self.tokenizer.pad_token = self.tokenizer.eos_token
                 pad_id = self.tokenizer.pad_token_id
             else:
+                # DEBUG
+                print(f"Warning: no PAD token found for {self.model_type}, adding a new one.")
+                
                 # Add a real PAD token
                 self.tokenizer.add_special_tokens({'pad_token': '<pad>'})
                 pad_id = self.tokenizer.pad_token_id
@@ -52,6 +55,10 @@ class HFModelAdapter(nn.Module):
 
     # here, idx and target are the x and y returned by the dataloader in trainer.py
     def forward(self, idx, targets=None):
+        # Add a mask so pads aren’t attended at inference
+        pad_id = self.hf_model.config.pad_token_id
+        attn = (idx != pad_id).long() if pad_id is not None else None
+        out = self.hf_model(input_ids=idx, labels=targets, attention_mask=attn)
         out = self.hf_model(input_ids=idx, labels=targets)
         # HF returns a ModelOutput with .logits and .loss
         # getattr(obj, name, default) tries to read attribute name from obj. 

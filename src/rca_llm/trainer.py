@@ -22,7 +22,9 @@ class Trainer:
         # optimizer parameters
         C.max_iters = None
         C.batch_size = 64
-        C.learning_rate = 3e-4
+
+        # low LR to avoid forgetting when fine-tuning full models
+        C.learning_rate = 5e-6
         C.betas = (0.9, 0.95)
         C.weight_decay = 0.1 # only applied on matmul weights
         C.grad_norm_clip = 1.0

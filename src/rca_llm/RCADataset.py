@@ -94,8 +94,9 @@ class RCADataset(Dataset):
         pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
         pad_len = self.block_size - x.numel()
         if pad_len > 0:
-            x = torch.cat([torch.full((pad_len,), pad_id, dtype=torch.long), x], dim=0)
-            y = torch.cat([torch.full((pad_len,), -100,  dtype=torch.long), y], dim=0)
+            # right padding because Causal LMs are typically trained with right padding.
+            x = torch.cat(x, [torch.full((pad_len,), pad_id, dtype=torch.long)], dim=0)
+            y = torch.cat(y, [torch.full((pad_len,), -100,  dtype=torch.long)], dim=0)
 
         attention_mask = (x != pad_id).long()  # if I need it later
 
