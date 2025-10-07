@@ -90,13 +90,15 @@ class RCADataset(Dataset):
         prompt_len = len(prompt_token_ids)  # guard if prompt >= block_size
         y[:prompt_len] = -100
 
-        # left-pad to block_size if needed
+        # right-pad to block_size if needed
         pad_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
+        pad_id = int(pad_id)  # ensure it's an int
         pad_len = self.block_size - x.numel()
         if pad_len > 0:
-            # right padding because Causal LMs are typically trained with right padding.
-            x = torch.cat(x, [torch.full((pad_len,), pad_id, dtype=torch.long)], dim=0)
-            y = torch.cat(y, [torch.full((pad_len,), -100,  dtype=torch.long)], dim=0)
+            pad_x = torch.full((pad_len,), pad_id, dtype=torch.long)
+            pad_y = torch.full((pad_len,), -100,  dtype=torch.long)
+            x = torch.cat([x, pad_x], dim=0)  # <- tensors inside a list/tuple
+            y = torch.cat([y, pad_y], dim=0)
 
 
         # DEBUG
