@@ -106,10 +106,10 @@ class RCADataset(Dataset):
 
 
         # DEBUG
-        if i == 0 and self.split == "train":
-            print("[dbg] one sample lengths:",
-                  "x_len=", x.numel(),
-                  "y_len=", y.numel(),
-                  "loss_tokens=", (y != -100).sum().item())
+        # if i == 0 and self.split == "train":
+        #     print("[dbg] one sample lengths:",
+        #           "x_len=", x.numel(),
+        #           "y_len=", y.numel(),
+        #           "loss_tokens=", (y != -100).sum().item())
 
         return x, y
