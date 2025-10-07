@@ -15,7 +15,7 @@ class RCADataset(Dataset):
 
     """
 
-    def __init__(self, df, split, tokenizer, block_size = 1024, test_frac=0.2, test_cap=None):
+    def __init__(self, df, split, tokenizer, block_size = 1024, test_frac=0.2, test_cap=None, seed=None, indices=None):
         assert split in {"train", "test"}
         self.df = df.reset_index(drop=True)
         self.split = split
@@ -25,17 +25,29 @@ class RCADataset(Dataset):
         self.prompt_resolution_addition = "\nRéponse de l'équipe IT pour la résolution du ticket: "
         
 
+        # Build split indices deterministically if a seed is provided, or use
+        # explicit indices if given. This ensures train/test are disjoint when
+        # both datasets are constructed with the same seed or shared indices.
         N = len(self.df)
-        perm = torch.randperm(N)
+        if indices is not None:
+            # indices should be a 1D tensor/list of row indices for this split
+            self.ixes = torch.as_tensor(indices, dtype=torch.long)
+        else:
+            if seed is not None:
+                g = torch.Generator()
+                g.manual_seed(int(seed))
+                perm = torch.randperm(N, generator=g)
+            else:
+                perm = torch.randperm(N)
 
-        num_test = int(N * test_frac)
-        if test_cap is not None:
-            num_test = min(num_test, test_cap)
+            num_test = int(N * test_frac)
+            if test_cap is not None:
+                num_test = min(num_test, test_cap)
 
-        test_idx = perm[:num_test]
-        train_idx = perm[num_test:]
+            test_idx = perm[:num_test]
+            train_idx = perm[num_test:]
 
-        self.ixes = test_idx if split == "test" else train_idx
+            self.ixes = test_idx if split == "test" else train_idx
 
     def __len__(self):
         return self.ixes.numel()
