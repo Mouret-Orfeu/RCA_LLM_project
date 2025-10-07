@@ -81,7 +81,7 @@ class HFModelAdapter(nn.Module):
         self,
         prompt,
         device,
-        max_new_tokens=20,
+        max_new_tokens=300,
         do_sample=True,
         temperature=1.0,
         top_k=None,

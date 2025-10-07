@@ -40,6 +40,10 @@ class RCADataset(Dataset):
     def __len__(self):
         return self.ixes.numel()
     
+    # getter for dataset length
+    def get_length(self):
+        return self.__len__()
+
     def get_block_size(self):
         # -1 because the last token does not ever plug back for prediction
         return self.block_size - 1 
