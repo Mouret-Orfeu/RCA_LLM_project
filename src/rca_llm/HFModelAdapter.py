@@ -6,7 +6,7 @@ from transformers import AutoTokenizer
 from transformers.trainer import get_parameter_names
 import torch, torch.nn as nn
 
-class HFmodelAdapter(nn.Module):
+class HFModelAdapter(nn.Module):
     def __init__(self, hf_model, model_type):
         super().__init__()
         self.hf_model = hf_model
