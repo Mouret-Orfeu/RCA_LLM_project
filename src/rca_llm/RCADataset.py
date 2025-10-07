@@ -98,6 +98,12 @@ class RCADataset(Dataset):
             x = torch.cat(x, [torch.full((pad_len,), pad_id, dtype=torch.long)], dim=0)
             y = torch.cat(y, [torch.full((pad_len,), -100,  dtype=torch.long)], dim=0)
 
-        attention_mask = (x != pad_id).long()  # if I need it later
+
+        # DEBUG
+        if i == 0 and self.split == "train":
+            print("[dbg] one sample lengths:",
+                  "x_len=", x.numel(),
+                  "y_len=", y.numel(),
+                  "loss_tokens=", (y != -100).sum().item())
 
         return x, y
