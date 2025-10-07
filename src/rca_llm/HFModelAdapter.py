@@ -11,14 +11,44 @@ class HFModelAdapter(nn.Module):
         super().__init__()
         self.hf_model = hf_model
         self.model_type = model_type
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_type)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_type, token=True)
+        # old checks for pad_token id
         # Ensure pad_token_id exists for generation warnings
         # You give the config a pading token (here the eos token) if it doesn't have one
         # The token used for padding does not matter since we will mask out the loss on those tokens
-        if self.hf_model.config.pad_token_id is None:
-            self.hf_model.config.pad_token_id = self.hf_model.config.eos_token_id
-        if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token is not None:
-            self.tokenizer.pad_token = self.tokenizer.eos_token
+        # if self.hf_model.config.pad_token_id is None:
+        #     self.hf_model.config.pad_token_id = self.hf_model.config.eos_token_id
+        # if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token is not None:
+        #     self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        # new checks and setup for pad_token id, making sure it is an int, not a list, 
+        # as some tokenizers return a list of ids for the pad token
+        pad_id = self.tokenizer.pad_token_id
+
+        if not isinstance(pad_id, int):
+            # Try to reuse EOS if it is a single int
+            eos_id = self.tokenizer.eos_token_id
+            if isinstance(eos_id, int) and self.tokenizer.eos_token is not None:
+                # Reuse EOS as PAD in the tokenizer
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                pad_id = self.tokenizer.pad_token_id
+            else:
+                # Add a real PAD token
+                self.tokenizer.add_special_tokens({'pad_token': '<pad>'})
+                pad_id = self.tokenizer.pad_token_id
+                # Resize model embeddings to accommodate new token
+                try:
+                    self.hf_model.resize_token_embeddings(len(self.tokenizer))
+                except AttributeError:
+                    pass  # some wrappers may not expose this <- understand this
+
+        # Now pad_id is guaranteed to be an int
+        pad_id = int(pad_id)
+
+        # Set on both config and generation_config (HF uses the latter in generate)
+        self.hf_model.config.pad_token_id = pad_id
+        if hasattr(self.hf_model, "generation_config"):
+            self.hf_model.generation_config.pad_token_id = pad_id
 
     # here, idx and target are the x and y returned by the dataloader in trainer.py
     def forward(self, idx, targets=None):
@@ -62,6 +92,11 @@ class HFModelAdapter(nn.Module):
         if attention_mask is not None:
             attention_mask = attention_mask.to(device)
 
+        # pull the single int pad id set in __init__
+        pad_id = int(self.hf_model.generation_config.pad_token_id
+                    if hasattr(self.hf_model, "generation_config") and self.hf_model.generation_config.pad_token_id is not None
+                    else self.hf_model.config.pad_token_id)
+
         y = self.hf_model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -69,7 +104,8 @@ class HFModelAdapter(nn.Module):
             do_sample=do_sample,
             temperature=temperature,
             top_k=top_k,
-            pad_token_id=self.hf_model.config.pad_token_id,
+            #pad_token_id=self.hf_model.config.pad_token_id,
+            pad_token_id=pad_id,  # ensure it's an int
             eos_token_id=self.hf_model.config.eos_token_id
         )
 
