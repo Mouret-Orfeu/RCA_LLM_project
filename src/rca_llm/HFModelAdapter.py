@@ -12,16 +12,7 @@ class HFModelAdapter(nn.Module):
         self.hf_model = hf_model
         self.model_type = model_type
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_type, token=True)
-        # old checks for pad_token id
-        # Ensure pad_token_id exists for generation warnings
-        # You give the config a pading token (here the eos token) if it doesn't have one
-        # The token used for padding does not matter since we will mask out the loss on those tokens
-        # if self.hf_model.config.pad_token_id is None:
-        #     self.hf_model.config.pad_token_id = self.hf_model.config.eos_token_id
-        # if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token is not None:
-        #     self.tokenizer.pad_token = self.tokenizer.eos_token
-
-        # new checks and setup for pad_token id, making sure it is an int, not a list, 
+        # setup for pad_token id, making sure it is an int, not a list, 
         # as some tokenizers return a list of ids for the pad token
         pad_id = self.tokenizer.pad_token_id
 
@@ -33,9 +24,6 @@ class HFModelAdapter(nn.Module):
                 self.tokenizer.pad_token = self.tokenizer.eos_token
                 pad_id = self.tokenizer.pad_token_id
             else:
-                # DEBUG
-                print(f"Warning: no PAD token found for {self.model_type}, adding a new one.")
-                
                 # Add a real PAD token
                 self.tokenizer.add_special_tokens({'pad_token': '<pad>'})
                 pad_id = self.tokenizer.pad_token_id
@@ -65,17 +53,6 @@ class HFModelAdapter(nn.Module):
         # If it exists, you get its value; if it doesn’t exist, you get default instead of raising an AttributeError.
         # HF models have a default parameter: return_dict=True, if it is set to False by mistake, then the getattr will avoid a crash by AttributeError
         return out.logits, getattr(out, "loss", None)
-
-    # def generate(self, idx, max_new_tokens, temperature=1.0, do_sample=False, top_k=None): # try to replace with the generate function in generate.ipynb
-    #     gen_kwargs = dict(
-    #         max_new_tokens=max_new_tokens,
-    #         do_sample=do_sample,
-    #         temperature=temperature,
-    #         pad_token_id=hf_model.config.pad_token_id,
-    #     )
-    #     if top_k is not None:
-    #         gen_kwargs["top_k"] = top_k
-    #     return hf_model.generate(input_ids=idx, **gen_kwargs)
     
     def generate_from_prompt(
         self,
@@ -111,7 +88,6 @@ class HFModelAdapter(nn.Module):
             do_sample=do_sample,
             temperature=temperature,
             top_k=top_k,
-            #pad_token_id=self.hf_model.config.pad_token_id,
             pad_token_id=pad_id,  # ensure it's an int
             eos_token_id=self.hf_model.config.eos_token_id
         )
@@ -121,37 +97,6 @@ class HFModelAdapter(nn.Module):
             return self.tokenizer.decode(new_ids, skip_special_tokens=skip_special_tokens)
         else:
             return self.tokenizer.decode(y[0].tolist(), skip_special_tokens=skip_special_tokens)
-
-    # def configure_optimizers(self, train_config): # try to replace withe the configure_optimizers function in model.py
-    #     # Similar to minGPT: decay on Linear/Conv1D weights, no decay on bias/LayerNorm/Embedding
-    #     decay, no_decay = [], []
-    #     whitelist = (torch.nn.Linear,)
-    #     blacklist = (torch.nn.LayerNorm, torch.nn.Embedding)
-    #     # HF GPT2 also uses a custom Conv1D; include it if present
-    #     try:
-    #         from transformers.pytorch_utils import Conv1D
-    #         whitelist = (torch.nn.Linear, Conv1D)
-    #     except Exception:
-    #         pass
-
-    #     for name, module in self.named_modules():
-    #         for pn, p in module.named_parameters(recurse=False):
-    #             if not p.requires_grad:
-    #                 continue
-    #             full = f"{name}.{pn}" if name else pn
-    #             if pn.endswith("bias") or isinstance(module, blacklist):
-    #                 no_decay.append(p)
-    #             elif pn.endswith("weight") and isinstance(module, whitelist):
-    #                 decay.append(p)
-    #             else:
-    #                 # fallback: treat as no_decay to be safe
-    #                 no_decay.append(p)
-
-    #     optim_groups = [
-    #         {"params": decay, "weight_decay": train_config.weight_decay},
-    #         {"params": no_decay, "weight_decay": 0.0},
-    #     ]
-    #     return torch.optim.AdamW(optim_groups, lr=train_config.learning_rate, betas=train_config.betas)
     
 
     def configure_optimizers(self, train_config):

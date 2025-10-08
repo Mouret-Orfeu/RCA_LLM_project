@@ -74,7 +74,7 @@ class CfgNode:
 
             keyval = arg.split('=')
             assert len(keyval) == 2, "expecting each override arg to be of form --arg=value, got %s" % arg
-            key, val = keyval # unpack
+            key, val = keyval
 
             # first translate val into a python object
             try:

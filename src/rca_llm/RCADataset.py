@@ -116,12 +116,4 @@ class RCADataset(Dataset):
             x = torch.cat([x, pad_x], dim=0)  # <- tensors inside a list/tuple
             y = torch.cat([y, pad_y], dim=0)
 
-
-        # DEBUG
-        # if i == 0 and self.split == "train":
-        #     print("[dbg] one sample lengths:",
-        #           "x_len=", x.numel(),
-        #           "y_len=", y.numel(),
-        #           "loss_tokens=", (y != -100).sum().item())
-
         return x, y
