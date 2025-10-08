@@ -1,5 +1,5 @@
 """
-Encapsulation class for HuggingFace models to be trained with my trainer class
+Encapsulation class for HuggingFace models to be trained with my Trainer class
 """
 
 from transformers import AutoTokenizer
