@@ -16,7 +16,7 @@ setup(
     name="rca-llm",
     version="0.1.0",
     author="Your Name",
-    description="RCA LLM utilities (Trainer + utils)",
+    description="RCA LLM utilities (Trainer + utils + HFModelAdapter + RCADataset + Evaluator)",
     license="MIT",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
