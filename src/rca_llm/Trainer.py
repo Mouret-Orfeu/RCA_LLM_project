@@ -1,7 +1,8 @@
 """
-Simple training loop; Boilerplate that could apply to any arbitrary neural network,
-so nothing in this file really has anything to do with GPT specifically.
+Simple training loop; Boilerplate that could apply to any arbitrary neural network.
 """
+
+# code adapted from Andrej Karpathy's minGPT: https://github.com/karpathy/minGPT
 
 import time
 from collections import defaultdict

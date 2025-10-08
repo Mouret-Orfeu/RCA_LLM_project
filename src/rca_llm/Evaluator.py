@@ -1,6 +1,6 @@
 """
-Simple evaluation utility, mirroring the style of Trainer.
-Exposes `eval_split` to compute BPB/byte-perplexity and simple QA metrics.
+Simple evaluation utility.
+Allow to evaluate a model on a dataset using the `eval_split` method.
 """
 
 import math, random, re, string

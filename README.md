@@ -1,20 +1,34 @@
 
-# minGPT
+# RCA LLM Project
 
-![mingpt](mingpt.jpg)
+## Description
 
-A PyTorch re-implementation of [GPT](https://github.com/openai/gpt-2), both training and inference. minGPT tries to be small, clean, interpretable and educational, as most of the currently available GPT model implementations can a bit sprawling. GPT is not a complicated model and this implementation is appropriately about 300 lines of code (see [mingpt/model.py](mingpt/model.py)). All that's going on is that a sequence of indices feeds into a [Transformer](https://arxiv.org/abs/1706.03762), and a probability distribution over the next index in the sequence comes out. The majority of the complexity is just being clever with batching (both across examples and over sequence length) for efficiency.
+A simple huggingface language model fine tuning project on IT ticket description and resolution for RCA.
+Parts of the project is inspired or adapted from Andrej Karpathy's minGPT: https://github.com/karpathy/minGPT.
 
-**note (Jan 2023)**: though I may continue to accept and change some details, minGPT is in a semi-archived state. For more recent developments see my rewrite [nanoGPT](https://github.com/karpathy/nanoGPT). Basically, minGPT became referenced across a wide variety of places (notebooks, blogs, courses, books, etc.) which made me less willing to make the bigger changes I wanted to make to move the code forward. I also wanted to change the direction a bit, from a sole focus on education to something that is still simple and hackable but has teeth (reproduces medium-sized industry benchmarks, accepts some tradeoffs to gain runtime efficiency, etc).
+## Project Structure
 
-The minGPT library is three files: [mingpt/model.py](mingpt/model.py) contains the actual Transformer model definition, [mingpt/bpe.py](mingpt/bpe.py) contains a mildly refactored Byte Pair Encoder that translates between text and sequences of integers exactly like OpenAI did in GPT, [mingpt/trainer.py](mingpt/trainer.py) is (GPT-independent) PyTorch boilerplate code that trains the model. Then there are a number of demos and projects that use the library in the `projects` folder:
+All the code is in src. The custom package rca_llm include:
 
-- `projects/adder` trains a GPT from scratch to add numbers (inspired by the addition section in the GPT-3 paper)
-- `projects/chargpt` trains a GPT to be a character-level language model on some input text file
-- `demo.ipynb` shows a minimal usage of the `GPT` and `Trainer` in a notebook format on a simple sorting example
-- `generate.ipynb` shows how one can load a pretrained GPT2 and generate text given some prompt
+- `Evaluator.py` Simple evaluation utility allow to evaluate a model on a dataset using the `eval_split` method.
+- `Trainer.py` Simple training loop, Boilerplate that could apply to any arbitrary neural network.
+- `HFModelAdapter.py` Encapsulation class for HuggingFace models to be trained with the Trainer class.
+- `RCADataset.py` inherits from `torch.utils.data.Dataset`, deals with data sampling for torch loader. Also deals with prompt formatting, padding and loss mask for the model prediction.
+- `utils.py` Simple utilities, mostly for configuration management and logging.
 
-### Library Installation
+In th src folder their is 4 other files among which 3 notebooks
+
+
+- `data_analysis.ipynb`: Exploratory dataset analysis 
+- `model_training_and_evaluation_demo`: Step-by-step guide for fine-tuning HuggingFace models on RCA ticket data.
+- `evaluation.ipynb`: Demonstrates model evaluation metrics and sample predictions.
+
+Additionally, there is a script file:
+
+- `main.py`: Entry point for running training and evaluation from the command line.
+
+
+### Setup
 
 If you want to `import mingpt` into your project:
 

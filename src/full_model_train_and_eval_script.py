@@ -4,6 +4,9 @@ Saves performance results in a multi-index pandas DataFrame in ./perf/model_perf
 Also saves training logs and loss curves in ./perf/model_training_log/.
 """
 
+# Parts of this code are inspired by Andrej Karpathy's minGPT: https://github.com/karpathy/minGPT
+
+
 # Silence tokenizers fork warning & lower verbosity BEFORE importing transformers/tokenizers
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes the forked-parallelism warning

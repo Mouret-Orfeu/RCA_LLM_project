@@ -1,3 +1,8 @@
+"""
+Simple utilities, mostly for configuration management and logging.
+"""
+
+# code adapted from Andrej Karpathy's minGPT: https://github.com/karpathy/minGPT
 
 import os
 import sys
