@@ -4,7 +4,14 @@ Saves performance results in a multi-index pandas DataFrame in ./perf/model_perf
 Also saves training logs and loss curves in ./perf/model_training_log/.
 """
 
+# Silence tokenizers fork warning & lower verbosity BEFORE importing transformers/tokenizers
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes the forked-parallelism warning
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="tokenizers")
+import transformers
+transformers.utils.logging.set_verbosity_error()
+
 import sys
 import time
 import json
@@ -15,6 +22,7 @@ from typing import List, Dict, Any
 import numpy as np
 import pandas as pd
 import torch
+from tqdm.auto import tqdm  # progress bars
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from huggingface_hub import login as hf_login
@@ -22,6 +30,17 @@ from huggingface_hub import login as hf_login
 from rca_llm import Trainer, Evaluator, CfgNode, set_seed, setup_logging
 from rca_llm.RCADataset import RCADataset
 from rca_llm.HFModelAdapter import HFModelAdapter
+
+# Color helpers (ANSI)
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+RESET = "\033[0m"
+
+def info(msg: str):
+    print(f"{GREEN}{msg}{RESET}")
+
+def result(msg: str):
+    print(f"{YELLOW}{msg}{RESET}")
 
 # Ask for HF token via env var or input
 def ask_hf_token() -> str:
@@ -143,10 +162,10 @@ def main():
         try:
             hf_login(token=hf_token)
         except Exception as e:
-            print(f"Warning: could not login to Hugging Face Hub: {e}")
+            info(f"Warning: could not login to Hugging Face Hub: {e}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Device:", device)
+    info(f"Device: {device}")
 
     # Paths and constants
     data_path = Path("./data/itsm_tickets_meaningful_200_utf8.csv")
@@ -178,13 +197,14 @@ def main():
     logs_root = Path("./perf/model_training_log")
     logs_root.mkdir(parents=True, exist_ok=True)
 
+    total_runs = len(model_types) * n_splits * len(max_iters_list)
+    global_pbar = tqdm(total=total_runs, desc="Total trainings", position=0)
+
     # Iterate over models
     for model_type in model_types:
-        print(f"\n=== Model: {model_type} ===")
-        # Tokenizer + model (per model_type)
-        print("Loading tokenizer & model (may take a while)...")
-        # hf_token or True to use local cache if no token
-        tokenizer = AutoTokenizer.from_pretrained(model_type, token=hf_token or True) 
+        info(f"\n=== Model: {model_type} ===")
+        info("Loading tokenizer & model (may take a while)...")
+        tokenizer = AutoTokenizer.from_pretrained(model_type, token=hf_token or True)
         hf_model = AutoModelForCausalLM.from_pretrained(
             model_type,
             token=hf_token or True,
@@ -196,7 +216,10 @@ def main():
         # For each split
         for fold_idx in range(n_splits):
             split_name = f"split_{fold_idx + 1}"
-            print(f"\n-- {split_name} --")
+            info(f"\n-- {split_name} --")
+            split_pbar = tqdm(total=len(max_iters_list),
+                              desc=f"{model_type} | {split_name}",
+                              leave=False, position=1)
 
             test_idx = folds[fold_idx]
             train_idx = np.concatenate([folds[i] for i in range(n_splits) if i != fold_idx])
@@ -207,11 +230,10 @@ def main():
 
             # For each training duration (max_iter)
             for max_iter in max_iters_list:
-                print(f"Training with max_iter={max_iter} ...")
+                info(f"Training with max_iter={max_iter} ...")
                 train_config = Trainer.get_default_config()
                 train_config.max_iters = int(max_iter)
-                train_config.batch_size = 2 # small batch size for memory constraints
-                # keep workers smaller to be conservative outside Colab
+                train_config.batch_size = 2  # small batch size for memory constraints
                 train_config.num_workers = min(2, train_config.num_workers)
 
                 trainer = Trainer(train_config, model, train_dataset)
@@ -249,6 +271,7 @@ def main():
                 trainer.run()
                 t1 = time.time()
                 train_seconds = t1 - t0
+
                 try:
                     (run_dir / "train_summary.json").write_text(
                         json.dumps({
@@ -262,9 +285,20 @@ def main():
                 except Exception:
                     pass
 
-                # Evaluate (test split requested)
+                # Evaluate (test split)
+                info("Evaluating...")
                 evaluator = Evaluator(eval_config, model, train_dataset, test_dataset)
                 test_metrics, _ = evaluator.eval_split('test')
+
+                # Print results in yellow
+                result(
+                    f"Eval {split_name}: "
+                    f"byte_perplexity={test_metrics.get('byte_perplexity'):.3f} | "
+                    f"bits_per_byte={test_metrics.get('bits_per_byte'):.3f} | "
+                    f"exact match={test_metrics.get('exact_match'):.2f}% | "
+                    f"token level f1={test_metrics.get('token_lvl_f1'):.2f}% | "
+                    f"ROUGE-L={test_metrics.get('rougeL_f1'):.2f}%"
+                )
 
                 # Update the performance store
                 perf_df = update_perf_df(perf_df, model_type, split_name, int(max_iter), {
@@ -279,7 +313,14 @@ def main():
                 perf_df = recompute_split_avg(perf_df, [model_type], metrics, [int(max_iter)], split_names_no_avg)
                 perf_df.to_pickle(perf_path)
 
-    print(f"\nSaved performance dataframe to: {perf_path}")
+                # Progress bars
+                split_pbar.update(1)
+                global_pbar.update(1)
+
+            split_pbar.close()
+
+    global_pbar.close()
+    info(f"\nSaved performance dataframe to: {perf_path}")
 
 
 if __name__ == "__main__":

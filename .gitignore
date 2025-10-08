@@ -4,4 +4,4 @@ __pycache__/
 .env
 .pylintrc
 venv
-minGPT.egg-info
+rca_llm.egg-info

@@ -9,3 +9,4 @@ streamlit
 streamlit-chat
 selenium
 openai
+matplotlib

@@ -8,8 +8,6 @@ from ast import literal_eval
 import numpy as np
 import torch
 
-# -----------------------------------------------------------------------------
-
 # initialize all seeds you might need so that every run is deterministic
 def set_seed(seed):
     random.seed(seed)
